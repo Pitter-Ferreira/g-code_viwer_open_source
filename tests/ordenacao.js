@@ -1,0 +1,51 @@
+const { launch, devices, serve, fx, out, PAGE, PAGE_PATH } = require('./common');
+(async () => {
+  const b = await launch();
+  const errs = [];
+  const p = await b.newPage({ viewport: { width: 1400, height: 860 } });
+  p.on('pageerror', e => errs.push(e.message));
+  await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('gcv-files', '1'); } catch (e) {} });
+  await p.goto(PAGE);
+  await p.setInputFiles('#dirIn', fx('pasta')); await p.waitForTimeout(300);
+  const rows = () => p.$$eval('#tree .tr', rs => rs.map(r => r.textContent.replace(/[▸▾]/g, '').replace(/\s+/g, ' ').trim()).join(' | '));
+  const expandAll = async () => { for (const n of ['Clientes', 'Joao', 'Placas']) { const el = await p.$('#tree .tr.dir >> text=' + n); if (el && (await el.textContent()).includes('▸')) await el.click(); } };
+  await expandAll();
+  console.log('[leitura] nome A→Z :', await rows());
+  await p.selectOption('#treeSort', 'name-desc'); console.log('[leitura] nome Z→A :', await rows());
+  await p.selectOption('#treeSort', 'date-desc'); console.log('[leitura] data ↓   :', await rows());
+  await p.check('#chkFlat'); console.log('[leitura] lista, data ↓:', await rows());
+  await p.selectOption('#treeSort', 'date-asc'); console.log('[leitura] lista, data ↑:', await rows());
+  console.log('   dica:', JSON.stringify(await p.$eval('#tree .tr', e => e.title)));
+  await p.screenshot({ path: out('sort-flat.png'), clip: { x: 0, y: 0, width: 300, height: 400 } });
+  await p.reload(); await p.waitForTimeout(300);
+  console.log('   preferência mantida:', await p.$eval('#treeSort', e => e.value), await p.$eval('#chkFlat', e => e.checked));
+  await p.uncheck('#chkFlat');
+  await p.close();
+
+  // modo com escrita (Chrome/Edge): datas lidas de cada arquivo
+  const { execSync } = require('child_process');
+  const q = await b.newPage({ viewport: { width: 1400, height: 860 } });
+  q.on('pageerror', e => errs.push(e.message));
+  const srv = require('http').createServer((req, res) => { res.end(require('fs').readFileSync(PAGE_PATH)); }).listen(8766);
+  await q.goto('http://127.0.0.1:8766/');
+  await q.evaluate(async () => {
+    const root = await navigator.storage.getDirectory();
+    for await (const k of root.keys()) await root.removeEntry(k, { recursive: true });
+    const top = await root.getDirectoryHandle('cnc', { create: true });
+    const sub = await top.getDirectoryHandle('500', { create: true });
+    const mk = async (d, n) => { const h = await d.getFileHandle(n, { create: true }); const w = await h.createWritable(); await w.write('G0 X0\nG1 X10 F100\n'); await w.close(); await new Promise(r => setTimeout(r, 1100)); };
+    await mk(sub, 'b-antigo.tap'); await mk(top, 'z-meio.nc'); await mk(sub, 'a-novo.tap');
+    window.showDirectoryPicker = async () => top;
+    localStorage.setItem('gcv-sort', 'date-desc'); localStorage.setItem('gcv-flat', '1');
+  });
+  await q.reload(); await q.evaluate(async () => { const top = await (await navigator.storage.getDirectory()).getDirectoryHandle('cnc'); window.showDirectoryPicker = async () => top; });
+  await q.click('#btnOpen'); await q.click('#menuOpen button[data-o="folder"]'); await q.waitForTimeout(1200);
+  const rows2 = () => q.$$eval('#tree .tr', rs => rs.map(r => r.textContent.replace(/[▸▾]/g, '').replace(/\s+/g, ' ').trim()).join(' | '));
+  console.log('[escrita] lista, data ↓:', await rows2(), '| contador:', await q.$eval('#frootCount', e => e.textContent));
+  await q.uncheck('#chkFlat'); await q.click('#tree .tr.dir >> text=500');
+  console.log('[escrita] pastas, data ↓:', await rows2());
+  await q.selectOption('#treeSort', 'name-asc'); console.log('[escrita] pastas, nome ↑:', await rows2());
+  srv.close();
+  console.log(errs.join('\n') || 'sem erros');
+  await b.close();
+})();

@@ -1,0 +1,38 @@
+const { launch, devices, serve, fx, out, PAGE, PAGE_PATH } = require('./common');
+const OLD = `(function(){
+  var og = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function(t, o){ if (/webgl/.test(t)) return null; return og.call(this, t, o); };
+  window.PointerEvent = undefined; window.ResizeObserver = undefined; window.showDirectoryPicker = undefined;
+  window.showOpenFilePicker = undefined; window.showSaveFilePicker = undefined; window.TextDecoder = undefined;
+  Element.prototype.closest = undefined; Math.hypot = undefined; Object.assign = undefined; Array.from = undefined;
+})();`;
+(async () => {
+  const b = await launch();
+  const q = await b.newPage();
+  await q.goto(PAGE);
+  console.log('file:// -> isSecureContext:', await q.evaluate(() => isSecureContext), '| showDirectoryPicker:', await q.evaluate(() => typeof showDirectoryPicker), '| modo pasta escrita:', await q.evaluate(() => HAS_FSA));
+  await q.close();
+  const p = await b.newPage({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
+  const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type()==='error') errs.push(m.text()); });
+  p.on('dialog', d => d.accept());
+  await p.addInitScript(OLD);
+  await p.goto(PAGE);
+  console.log('antigo: render =', await p.$eval('#renderInfo', e => e.textContent), '| árvore vazia:', await p.$eval('#tree', e => e.textContent.trim()));
+  await p.setInputFiles('#dirIn', fx('pasta'));
+  await p.waitForTimeout(400);
+  await p.click('#tree .tr.dir >> text=Clientes');
+  console.log('árvore:', await p.$$eval('#tree .tr', rs => rs.map(r => r.textContent.replace(/[▸▾]/g,'').trim()).join(' | ')), '| etiqueta:', await p.$eval('#frootRO', e => e.hidden ? 'oculta' : e.textContent));
+  await p.click('#tree .tr.file >> text=latin1.nc'); await p.waitForTimeout(700);
+  console.log('aberto:', await p.$eval('#fileName', e => e.textContent), '| enc', await p.evaluate(() => S.file.enc), '| linha 2:', await p.evaluate(() => S.text.split('\n')[1]));
+  await p.click('#tree .tr.file >> text=latin1.nc', { button: 'right' });
+  console.log('menu (só leitura):', await p.$eval('#ctx', e => e.hidden ? 'oculto' : e.textContent));
+  await p.keyboard.press('Escape');
+  await p.fill('#tabF input[data-k="800.0000"]', '1000'); await p.click('#btnApply'); await p.waitForTimeout(700);
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#btnSave')]);
+  const buf = require('fs').readFileSync(await dl.path());
+  console.log('download:', dl.suggestedFilename(), '| F1000:', buf.toString('latin1').includes('F1000'), '| ç como byte E7 (latin1 preservado):', buf.includes(0xe7), '| sem UTF-8 (C3 A7):', !buf.includes(Buffer.from([0xc3, 0xa7])));
+  console.log('nota salvar:', await p.$eval('#saveNote', e => e.textContent));
+  await p.screenshot({ path: out('ro.png') });
+  console.log(errs.join('\n') || 'sem erros');
+  await b.close();
+})();
