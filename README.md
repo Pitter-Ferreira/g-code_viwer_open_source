@@ -1,5 +1,7 @@
 # G-code Viewer
 
+**Português** · [English](README.en.md)
+
 Visualizador e editor de G-code em **um único arquivo HTML**. Não precisa instalar nada nem ter internet: é só abrir no navegador.
 
 Foi feito para rodar também em PCs antigos de CNC (ex.: Windows XP/7 com Mach3 e vídeo onboard sem WebGL2).
