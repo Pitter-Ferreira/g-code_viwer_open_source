@@ -1,6 +1,6 @@
 {
   "name": "g-code-viewer",
-  "version": "0.55.0",
+  "version": "0.6.0",
   "private": true,
   "description": "Visualizador e editor de G-code em um único arquivo HTML, que roda até em PCs antigos de CNC.",
   "license": "MIT",

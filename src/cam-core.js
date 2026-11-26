@@ -494,21 +494,25 @@
       }
       const closed = pts.length > 2 && dist(pts[0], pts[pts.length-1]) <= tol;
       if (closed) pts.pop();
-      done.push({ pts: pts, closed: closed, layer: s0.layer, color: s0.color, group: s0.group, label: s0.label });
+      done.push({ pts: pts, closed: closed, layer: s0.layer, color: s0.color, group: s0.group, label: s0.label, key: s0.key, partKey: s0.partKey });
     });
     return done;
   }
   // unit = mm por unidade do arquivo. Retorna o modelo: contornos, hierarquia (peça/furo) e grupos (camadas/cores)
-  function buildModel(imp, unit){
+  // opts.prefix: identifica o arquivo (várias peças de vários desenhos); opts.keepGroups: mantém grupo/camada já definidos
+  function buildModel(imp, unit, opts){
+    opts = opts || {};
     const raw = imp.shapes.map(s => {
       const o = { pts: s.pts.map(p => [p[0] * unit, p[1] * unit]), closed: s.closed, layer: s.layer, color: s.color || '#000000', kind: s.kind };
       if (s.kind === 'circle'){ o.cx = s.cx * unit; o.cy = s.cy * unit; o.r = s.r * unit; }
+      if (opts.keepGroups){ o.group = s.group; o.label = s.label; o.key = s.key; o.partKey = s.partKey; }
       return o;
     });
     // grupo: camada do DXF (separada por cor quando a camada tem várias) ou cor do SVG
     const colorsPerLayer = {};
     raw.forEach(s => { if (s.layer !== null && s.layer !== undefined){ const c = colorsPerLayer[s.layer] || (colorsPerLayer[s.layer] = {}); c[s.color] = 1; } });
     raw.forEach(s => {
+      if (opts.keepGroups && s.group !== undefined) return;
       if (s.layer !== null && s.layer !== undefined){
         const multi = Object.keys(colorsPerLayer[s.layer]).length > 1;
         s.group = multi ? s.layer + ' ' + s.color : s.layer;
@@ -525,6 +529,7 @@
     });
     list.forEach((s, i) => {
       s.id = i;
+      if (!opts.keepGroups || s.key === undefined) s.key = (opts.prefix ? opts.prefix + ':' : '') + i;
       s.bb = bboxOf(s.pts);
       if (s.closed){ s.sa = area(s.pts); s.area = Math.abs(s.sa); }
       s.len = s.kind === 'point' ? 0 : pathLen(s.pts, s.closed);
@@ -563,7 +568,43 @@
     groups.sort((a, b) => a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
     const bb = bboxOf([]);
     list.forEach(s => bboxOf([[s.bb[0], s.bb[1]], [s.bb[2], s.bb[3]]], bb));
-    return { shapes: list, groups: groups, bb: bb, skipped: imp.skipped || {}, nParts: closed.filter(s => s.depth % 2 === 0).length };
+    return { shapes: list, closed: closed, groups: groups, bb: bb, skipped: imp.skipped || {}, nParts: closed.filter(s => s.depth % 2 === 0).length };
+  }
+
+  // operação escolhida (sem "automático"): da linha (clique) ou da camada
+  function explicitOp(s, cfg){
+    const ov = cfg.overrides && cfg.overrides[s.key];
+    if (ov) return ov;
+    const L = cfg.layers && cfg.layers[s.group];
+    return (L && L.op) || 'auto';
+  }
+  // peça/furo "de verdade": contornos marcados como Ignorar (ex.: moldura em volta do desenho) não contam
+  function resolve(model, cfg){
+    const off = s => explicitOp(s, cfg) === 'off';
+    model.closed.forEach(s => { // do maior para o menor: o pai vem antes
+      let p = s.parent; while (p && off(p)) p = p.parent;
+      s.eParent = p; s.eDepth = p ? p.eDepth + 1 : 0;
+      s.ePart = s.eDepth % 2 === 0 ? s : p.ePart;
+    });
+    model.shapes.forEach(s => {
+      if (s.closed) return;
+      let c = s.container; while (c && off(c)) c = c.parent;
+      s.eParent = c; s.ePart = c ? c.ePart : null; s.eDepth = c ? c.eDepth + 1 : 0;
+    });
+    model.shapes.forEach(s => { s.role = s.kind === 'point' ? 'drill' : !s.closed ? 'engrave' : s.eDepth % 2 === 0 ? 'out' : 'in'; s.off = off(s); });
+  }
+  // peças que podem ir para o aproveitamento: contorno externo + tudo o que está dentro dele
+  function partsOf(model, cfg){
+    resolve(model, cfg);
+    const parts = [], byKey = {}, loose = [];
+    model.shapes.forEach(s => { if (s.closed && !s.off && s.ePart === s){ const p = { outer: s, members: [], area: s.area, bb: s.bb.slice() }; parts.push(p); byKey[s.key] = p; } });
+    model.shapes.forEach(s => {
+      if (s.off) return;
+      const p = s.ePart && byKey[s.ePart.key];
+      if (p) p.members.push(s); else loose.push(s);
+    });
+    parts.sort((a, b) => b.area - a.area);
+    return { parts: parts, loose: loose };
   }
 
   /* ---------------- caminhos da fresa ---------------- */
@@ -585,9 +626,7 @@
   function orient(p, ccw){ const a = area(p); return (a > 0) === ccw ? p : p.slice().reverse(); }
   const OPS = { out: 'Recorte por fora', in: 'Recorte por dentro', pocket: 'Rebaixo', drill: 'Furação', engrave: 'Gravar na linha' };
   function effOp(s, cfg){
-    const ov = cfg.overrides && cfg.overrides[s.id];
-    const L = (cfg.layers && cfg.layers[s.group]) || {};
-    let op = ov || L.op || 'auto';
+    let op = explicitOp(s, cfg);
     if (op === 'auto') op = s.role;
     return op;
   }
@@ -612,6 +651,7 @@
     const W = (k, msg) => { if (warnOnce[k]){ warnOnce[k].n++; return; } warnOnce[k] = { n: 1, msg: msg }; };
     if (!tools || !tools.length) return { feats: [], warn: ['Cadastre pelo menos uma fresa.'], bb: null, dx: 0, dy: 0 };
     const climb = cfg.dir !== 'conv';
+    resolve(model, cfg);
     model.shapes.forEach(s => {
       const L = (cfg.layers && cfg.layers[s.group]) || {};
       let op = effOp(s, cfg);
@@ -624,7 +664,7 @@
       if (op === 'engrave' && s.kind === 'point'){ op = 'drill'; }
       const dep = depthOf(op, L, cfg);
       if (dep.clamped) W('deep', 'profundidade maior que a chapa: limitada a ' + fmt(cfg.sheet.t + cfg.overcut) + ' mm');
-      const f = { op: op, tool: tool, shape: s, depth: dep.d, through: dep.through, paths: [], tabs: [], level: s.depth };
+      const f = { op: op, tool: tool, shape: s, depth: dep.d, through: dep.through, paths: [], tabs: [], level: s.eDepth };
       if (op === 'out' || op === 'in'){
         const res = offsetCL([toCL(s.pts)], op === 'out' ? r : -r).map(fromCL);
         if (!res.length){ W('small-' + op, 'recortes internos menores que a fresa ' + tool.name + ' (Ø ' + fmt(tool.d) + ') foram ignorados'); return; }
@@ -638,7 +678,7 @@
       } else if (op === 'pocket'){
         const C = CL(), c = new C.Clipper();
         c.AddPath(toCL(s.pts), C.PolyType.ptSubject, true);
-        model.shapes.forEach(ch => { if (ch.closed && ch.parent === s) c.AddPath(toCL(ch.pts), C.PolyType.ptClip, true); });
+        model.shapes.forEach(ch => { if (ch.closed && !ch.off && ch.eParent === s) c.AddPath(toCL(ch.pts), C.PolyType.ptClip, true); });
         const region = new C.Paths();
         c.Execute(C.ClipType.ctDifference, region, C.PolyFillType.pftNonZero, C.PolyFillType.pftNonZero);
         const step = Math.max(0.05, tool.d * Math.min(Math.max((tool.over || 40) / 100, 0.05), 0.95));
@@ -814,6 +854,7 @@
     const d = new Date();
     L.push('(G-code Viewer v' + ascii(meta.version || '') + ' - gerado em ' + d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear() + ')');
     if (meta.name) L.push('(Desenho: ' + ascii(meta.name) + ')');
+    if (meta.sheet) L.push('(Chapa ' + ascii(meta.sheet) + ')');
     L.push('(Chapa: ' + fmt(cfg.sheet.w) + ' x ' + fmt(cfg.sheet.h) + ' x ' + fmt(cfg.sheet.t) + ' mm)');
     L.push('(Origem: X0 Y0 no canto inferior esquerdo da chapa, Z0 ' + (top ? 'no topo da chapa' : 'na mesa') + ')');
     used.forEach(t => L.push('(T' + tnum(t) + ': ' + ascii(t.name) + ' - D' + fmt(t.d) + ' - S' + fmt(t.s) + ' - F' + fmt(t.f) + ' - mergulho F' + fmt(t.fz) + ' - passada ' + fmt(t.step) + ')'));
@@ -906,5 +947,5 @@
   }
 
   root.CAMCore = { readDXF: readDXF, readSVG: readSVG, buildModel: buildModel, plan: plan, gcode: gcode, splitTabs: splitTabs, parsePathD: parsePathD,
-    area: area, pathLen: pathLen, bboxOf: bboxOf, dist: dist, effOp: effOp, OPS: OPS, fmt: fmt, inside: inside };
+    area: area, pathLen: pathLen, bboxOf: bboxOf, dist: dist, effOp: effOp, explicitOp: explicitOp, resolve: resolve, partsOf: partsOf, OPS: OPS, fmt: fmt, inside: inside };
 })(typeof window !== 'undefined' ? window : this);

@@ -267,7 +267,8 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .camview.panning{cursor:move}
 .cam-tools{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:10px;z-index:2;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:4px 4px 4px 10px;font-size:12px}
 .cam-tools .btn{height:28px}
-.camview .vtools{left:auto;right:12px;bottom:46px;align-items:flex-end}
+.camview .vtools{left:12px;bottom:12px;max-width:calc(100% - 210px)}
+.camview .legend{flex-direction:row;flex-wrap:wrap;gap:3px 14px;padding:6px 10px}
 .cam-sel .field{margin-top:6px}
 .cam-sel select{max-width:190px}
 .lrows .lrow{padding:6px 0;border-top:1px solid var(--border)}
@@ -290,6 +291,37 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .tlist .trow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tlist .trow small{color:var(--muted);flex:none}
 .tr.cad .ic{color:#7c3aed}
+/* lista de peças (barra esquerda, aba Gerar G-code) */
+.cjob{display:none;flex-direction:column;border-bottom:1px solid var(--border);min-height:0;max-height:62%;flex:none}
+.app.mode-cam .cjob{display:flex}
+.cjob-head{display:flex;align-items:center;gap:6px;padding:10px 10px 6px}
+.cjob-head b{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:650}
+.cjob-head small{color:var(--muted);font-size:11px;flex:1;white-space:nowrap}
+.cjob-head .btn.icon{width:26px;height:26px;flex:none}
+.cjob-list{overflow:auto;padding:0 6px 6px;min-height:40px}
+.cjob-tip{font-size:11px;color:var(--muted);padding:2px 10px 8px;line-height:1.35}
+.jf{border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--panel-2);overflow:hidden}
+.jf.on{border-color:var(--accent)}
+.jfh{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 8px;cursor:pointer;font-size:13px;font-weight:600}
+.jfh span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jfh .x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 4px}
+.jfh .x:hover{color:#dc2626}
+.jkeep{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:0 8px 4px;cursor:pointer}
+.jkeep input{accent-color:var(--accent);margin:0}
+.jp{display:flex;align-items:center;gap:8px;padding:4px 6px 4px 8px;border-top:1px solid var(--border);font-size:12px;cursor:pointer;background:var(--panel)}
+.jp:hover,.jp.on{background:var(--accent-soft)}
+.jp canvas{flex:none;width:44px;height:30px;border-radius:4px;background:var(--panel-2)}
+.jp .jn{flex:1;min-width:0;line-height:1.25}
+.jp .jn b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jp .jn small{color:var(--muted)}
+.jp .jq{display:flex;align-items:center;gap:3px;flex:none}
+.jp .jq input{width:40px;height:26px;text-align:center;border:1px solid var(--border);border-radius:6px;background:var(--panel-2);padding:0 2px}
+.jp .jq button{width:22px;height:26px;border:1px solid var(--border);border-radius:6px;background:var(--panel-2);cursor:pointer;padding:0;line-height:1}
+.jp.zero{opacity:.55}
+.snav{display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap}
+.snav .btn.icon{width:26px;height:26px;font-size:16px}
+.cam-busy{font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap}
+#camNestInfo .kv b{font-weight:600}
 .ewarn div+div{margin-top:4px}
 
 /* navegadores antigos sem "gap" em flexbox */
@@ -306,7 +338,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
   .acts .btn{margin:4px}
   .layer-row>*{margin-right:6px}
   .field label{margin-right:8px}
-  .lctl>*,.lhead>*,.cam-tools>*,.tlist .trow>*{margin-right:6px}
+  .lctl>*,.lhead>*,.cam-tools>*,.tlist .trow>*,.cjob-head>*,.jfh>*,.jp>*,.jkeep>*,.snav>*{margin-right:6px}
   .eacts .btn+.btn{margin-left:8px}
 }
 
@@ -345,6 +377,15 @@ input[type=range]{accent-color:var(--accent);width:100%}
 <div id="errbar"></div>
 <div class="app">
   <aside class="files" id="filesPane">
+    <div class="cjob" id="camJob">
+      <div class="cjob-head">
+        <b>Peças para cortar</b><small id="camJobCount"></small>
+        <button class="btn icon" id="camAdd" title="Adicionar desenhos DXF/SVG (pode escolher vários)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="btn icon" id="camClear" title="Tirar todos os desenhos da lista"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+      </div>
+      <div class="cjob-list" id="camJobList"></div>
+      <div class="cjob-tip">Clique num desenho .dxf/.svg da pasta abaixo para somar à lista.</div>
+    </div>
     <div class="froot" id="froot" hidden>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="#d9a21b" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       <span class="nm" id="frootName"></span><small id="frootCount"></small>
@@ -447,6 +488,8 @@ input[type=range]{accent-color:var(--accent);width:100%}
       <canvas id="camCv"></canvas>
       <div class="mbox cam-sel" id="camSel" hidden></div>
       <div class="cam-tools">
+        <span class="cam-busy" id="camBusy" hidden></span>
+        <span class="snav" id="camSheetNav" hidden><button class="btn icon" id="camPrev" title="Chapa anterior">‹</button><b id="camSheetLbl"></b><button class="btn icon" id="camNext" title="Próxima chapa">›</button></span>
         <label class="opt" title="Mostra o caminho do centro da fresa e as pontes"><input type="checkbox" id="camShowPaths" checked><span>Caminho da fresa</span></label>
         <button class="btn" id="camFit" title="Enquadrar a chapa (F ou duplo clique)">Enquadrar</button>
       </div>
@@ -455,16 +498,16 @@ input[type=range]{accent-color:var(--accent);width:100%}
       <div class="empty" id="camEmpty">
         <div class="card">
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2.5"/><path d="M14 14h4v4h-4zM6 16l3-3"/></svg>
-          <h2>Arraste um desenho DXF ou SVG aqui</h2>
-          <p>ou abra pelo botão abaixo. Escolha a operação de cada camada e a fresa, e o G-code sai pronto para o Mach3.</p>
+          <h2>Arraste desenhos DXF ou SVG aqui</h2>
+          <p>ou abra pelo botão abaixo (pode escolher vários). As peças vão para a lista à esquerda, com quantidade, e são encaixadas na chapa para aproveitar o material.</p>
           <div class="acts">
-            <button class="btn primary" id="camOpenBtn">Abrir desenho</button>
+            <button class="btn primary" id="camOpenBtn">Abrir desenhos</button>
             <button class="btn" id="camSample">Exemplo</button>
           </div>
           <div class="ext">.dxf · .svg — arquivo .dwg: salve como DXF no programa de desenho</div>
         </div>
       </div>
-      <input type="file" id="camFileIn" accept=".dxf,.svg,image/svg+xml" style="display:none">
+      <input type="file" id="camFileIn" accept=".dxf,.svg,image/svg+xml" multiple style="display:none">
       <input type="file" id="camToolFile" accept=".json,application/json" style="display:none">
     </section>
 
@@ -550,7 +593,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
     <div class="panel cam" id="camFilePanel">
       <h3>Desenho <span id="camFileName"></span></h3>
       <div id="camInfo"><div class="kv"><span class="k">Nenhum desenho aberto</span></div></div>
-      <div class="field"><label for="camUnit" title="Confira o tamanho do desenho acima: se estiver errado, troque a unidade">Unidade do desenho</label>
+      <div class="field" id="camUnitRow"><label for="camUnit" title="Confira o tamanho do desenho acima: se estiver errado, troque a unidade">Unidade deste desenho</label>
         <select id="camUnit">
           <option value="auto">Automática</option><option value="mm">mm</option><option value="cm">cm</option><option value="m">metro</option>
           <option value="in">polegada</option><option value="px96">px (96 ppp)</option><option value="px72">pt / px 72 ppp (Illustrator, Corel)</option>
@@ -564,12 +607,26 @@ input[type=range]{accent-color:var(--accent);width:100%}
       <div class="note" style="margin-left:0">Automático: contorno externo = recorte por fora, furo = recorte por dentro, linha aberta = gravar, ponto = furar. Clique numa linha do desenho para mudar só ela.</div>
     </div>
 
+    <div class="panel cam" id="camNestPanel">
+      <h3>Aproveitamento da chapa</h3>
+      <div class="field"><label for="camPlace">Posição das peças</label>
+        <select id="camPlace" data-k="place"><option value="nest">Automática</option><option value="corner">Como no desenho (no canto)</option><option value="asis">Como no desenho (mesmo lugar)</option></select></div>
+      <div class="field"><label for="camGap" title="Espaço entre as bordas de duas peças. Precisa ser maior que o diâmetro da fresa.">Distância entre peças</label><input type="text" id="camGap" data-k="nest.gap" class="num"></div>
+      <div class="field"><label for="camRot" title="Se o material tem veio (compensado, madeira), não deixe girar">Girar peças</label>
+        <select id="camRot" data-k="nest.rot"><option value="4">0°, 90°, 180° e 270°</option><option value="2">Só 0° e 180°</option><option value="1">Não girar</option></select></div>
+      <div id="camNestInfo"></div>
+      <div class="bar" id="camNestBar" hidden><i></i></div>
+      <div class="eacts"><button class="btn" id="camImprove" title="Tenta outras ordens de encaixe por alguns segundos e fica com a melhor">Melhorar aproveitamento</button></div>
+      <div class="note" style="margin-left:0" id="camNestNote"></div>
+    </div>
+
     <div class="panel cam" id="camGenPanel">
       <h3>Gerar G-code</h3>
       <div id="camStats"><div class="kv"><span class="k">—</span></div></div>
       <div class="ewarn" id="camWarn"></div>
       <div class="eacts"><button class="btn primary" id="camGen" title="Gera o G-code e abre na aba Visualizar para conferir">Gerar e visualizar</button></div>
-      <div class="eacts"><button class="btn" id="camSaveG" title="Salva o arquivo G-code (Ctrl+S)">Salvar G-code…</button></div>
+      <div class="eacts"><button class="btn" id="camSaveG" title="Salva o G-code desta chapa (Ctrl+S)">Salvar G-code…</button></div>
+      <div class="eacts" id="camSaveAllRow" hidden><button class="btn" id="camSaveAll" title="Salva um arquivo G-code para cada chapa">Salvar todas as chapas</button></div>
       <div class="note" style="margin-left:0" id="camOrigin"></div>
     </div>
 
@@ -579,8 +636,6 @@ input[type=range]{accent-color:var(--accent);width:100%}
       <div class="field"><label for="camH">Altura da chapa (Y)</label><input type="text" id="camH" data-k="sheet.h" class="num"></div>
       <div class="field"><label for="camT">Espessura</label><input type="text" id="camT" data-k="sheet.t" class="num"></div>
       <div class="field"><label for="camMargin" title="Distância da borda da chapa até o caminho da fresa">Margem</label><input type="text" id="camMargin" data-k="margin" class="num"></div>
-      <div class="field"><label for="camPlace">Posição do desenho</label>
-        <select id="camPlace" data-k="place"><option value="corner">Encostar no canto (margem)</option><option value="asis">Como está no desenho</option></select></div>
       <div class="field"><label for="camZRef" title="Onde você zera o Z na máquina">Z zero</label>
         <select id="camZRef" data-k="zRef"><option value="top">Topo da chapa</option><option value="table">Mesa (base da chapa)</option></select></div>
       <div class="field"><label for="camOver" title="Quanto o recorte passa da espessura para soltar a peça">Passar da chapa</label><input type="text" id="camOver" data-k="overcut" class="num"></div>
@@ -2924,6 +2979,11 @@ on(window, 'drop', e => {
   e.preventDefault(); dragDepth = 0; $('#drop').classList.remove('on');
   if (T.dragId >= 0) return;
   const dt = e.dataTransfer, f = dt && dt.files && dt.files[0];
+  if (dt && dt.files && dt.files.length > 1 && window.CAM){
+    const cads = [];
+    for (let i = 0; i < dt.files.length; i++) if (isCad(dt.files[i].name)) cads.push(dt.files[i]);
+    if (cads.length){ cads.forEach(x => window.CAM.openFile(x)); return; }
+  }
   const item = dt && dt.items && dt.items[0];
   if (item && item.kind === 'file' && typeof item.getAsFileSystemHandle === 'function'){
     // Chrome/Edge: com o "handle" dá para salvar direto no arquivo (ou abrir a pasta solta)
@@ -3021,6 +3081,7 @@ function initCollapsible(){
 <script data-vendor="clipper-lib/clipper.js"></script>
 <script data-vendor="dxf-parser/dist/dxf-parser.js"></script>
 <script data-src="cam-core.js"></script>
+<script data-src="cam-nest.js"></script>
 <script data-src="cam.js"></script>
 <script>
 /* mostra erros na tela e avisa se o navegador for antigo demais */

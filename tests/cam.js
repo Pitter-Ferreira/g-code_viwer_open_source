@@ -19,6 +19,8 @@ const GEOM = `(function(){
   });
 })()`;
 
+const idle = async p => { await p.waitForFunction(() => window.CAM && !CAM.busy(), null, { timeout: 90000 }); await p.waitForTimeout(80); };
+
 (async () => {
   const b = await launch();
   const srv = await serve(8767);
@@ -32,8 +34,9 @@ const GEOM = `(function(){
   await p.reload();
   await p.click('#modeTabs button[data-m="cam"]');
   check(await p.isVisible('#camEmpty'), 'aba Gerar G-code abre com o cartão vazio');
+  await p.selectOption('#camPlace', 'corner');
   await p.setInputFiles('#camFileIn', fx('cam/peca.dxf'));
-  await p.waitForTimeout(600);
+  await p.waitForTimeout(300); await idle(p);
   const info = await p.$eval('#camInfo', e => e.innerText.replace(/\s+/g, ' '));
   check(/Tamanho 260 × 100 mm/.test(info), 'tamanho do desenho', info);
   check(/Peças 2/.test(info), 'linhas soltas viram peças fechadas (2 peças)', info);
@@ -41,7 +44,7 @@ const GEOM = `(function(){
   check(layers.join(' ') === 'CORTE=auto/t1 FURO=drill/t3 GRAVAR=engrave/t1 REBAIXO=pocket/t1', 'operação e fresa adivinhadas pelo nome da camada', layers.join(' '));
   await p.fill('#camLayers .lrow:nth-child(4) .ldep', '5');
   await p.selectOption('#camLayers .lrow:nth-child(3) .ltool', 't2');
-  await p.waitForTimeout(400);
+  await p.waitForTimeout(300); await idle(p);
   let g = await p.evaluate(GEOM);
   const by = op => g.filter(f => f.op === op);
   by('out').forEach(f => check(Math.abs(f.lo - f.r) < 0.02 && Math.abs(f.hi - f.r) < 0.02, 'recorte por fora a 1 raio da peça (r=' + f.r + ')', 'min ' + f.lo.toFixed(4) + ' máx ' + f.hi.toFixed(4)));
@@ -70,10 +73,10 @@ const GEOM = `(function(){
   await p.click('#modeTabs button[data-m="cam"]');
 
   /* ---------------- unidades ---------------- */
-  await p.selectOption('#camUnit', 'cm'); await p.waitForTimeout(300);
+  await p.selectOption('#camUnit', 'cm'); await p.waitForTimeout(300); await idle(p);
   check(/Tamanho 2.600 × 1.000 mm|Tamanho 2600 × 1000 mm/.test(await p.$eval('#camInfo', e => e.innerText.replace(/\s+/g, ' '))), 'trocar a unidade para cm multiplica por 10');
   check((await p.$eval('#camWarn', e => e.innerText)).indexOf('passa da chapa') >= 0, 'avisa quando o desenho não cabe na chapa');
-  await p.selectOption('#camUnit', 'auto'); await p.waitForTimeout(300);
+  await p.selectOption('#camUnit', 'auto'); await p.waitForTimeout(300); await idle(p);
 
   /* ---------------- fresas ---------------- */
   await p.click('#camToolNew'); await p.fill('#ctName', 'Fresa 4 mm'); await p.fill('#ctD', '4'); await p.waitForTimeout(400);
@@ -97,19 +100,19 @@ const GEOM = `(function(){
   await p.goto(PAGE);
   await p.click('#modeTabs button[data-m="cam"]');
   await p.setInputFiles('#camFileIn', fx('cam/placa.svg'));
-  await p.waitForTimeout(600);
+  await p.waitForTimeout(300); await idle(p);
   const sinfo = await p.$eval('#camInfo', e => e.innerText.replace(/\s+/g, ' '));
   check(/Tamanho 278,28 × 120 mm/.test(sinfo), 'tamanho do SVG em mm (viewBox + width em mm, grupo girado)', sinfo);
   check(/Peças 2/.test(sinfo) && /1 texto/.test(sinfo), 'peças e texto ignorado', sinfo);
   const sl = await p.$$eval('#camLayers .lrow b', r => r.map(x => x.textContent).join(' | '));
   check(sl === 'Cor #0000ff | Cor #00aa00 | Cor #ff0000 | Cor #ff00ff', 'grupos por cor (inclusive cor herdada no <use>)', sl);
-  const sq = await p.evaluate(() => { const s = CAM.state.model.shapes.filter(x => x.closed && x.depth === 0 && x.area < 2000)[0]; return s ? [s.bb[0], s.bb[1], s.bb[2], s.bb[3]].map(v => v.toFixed(2)).join(',') : 'nada'; });
+  const sq = await p.evaluate(() => { const s = CAM.state.files[0].model.shapes.filter(x => x.closed && x.depth === 0 && x.area < 2000)[0]; return s ? [s.bb[0], s.bb[1], s.bb[2], s.bb[3]].map(v => v.toFixed(2)).join(',') : 'nada'; });
   check(sq === '231.72,111.72,288.28,168.28', 'quadrado girado 45° no lugar certo (Y invertido)', sq);
-  const holes = await p.evaluate(() => CAM.state.model.shapes.filter(s => s.kind === 'circle').map(s => (s.r * 2).toFixed(2) + '@' + s.cx.toFixed(1) + ',' + s.cy.toFixed(1)).sort().join(' '));
+  const holes = await p.evaluate(() => CAM.state.files[0].model.shapes.filter(s => s.kind === 'circle').map(s => (s.r * 2).toFixed(2) + '@' + s.cx.toFixed(1) + ',' + s.cy.toFixed(1)).sort().join(' '));
   check(holes === '30.00@60.0,130.0 8.00@195.0,175.0 8.00@195.0,85.0', 'círculos (inclusive <use>) com centro e diâmetro', holes);
   await p.selectOption('#camLayers .lrow:nth-child(1) .lop', 'pocket');
   await p.selectOption('#camLayers .lrow:nth-child(4) .lop', 'drill');
-  await p.waitForTimeout(400);
+  await p.waitForTimeout(300); await idle(p);
   g = await p.evaluate(GEOM);
   check(g.filter(f => f.op === 'pocket').length === 1 && g.filter(f => f.op === 'pocket')[0].inside, 'rebaixo no caminho com arco e curva');
   check(g.filter(f => f.op === 'out').every(f => Math.abs(f.lo - f.r) < 0.02 && Math.abs(f.hi - f.r) < 0.02), 'recorte por fora do SVG a 1 raio (cantos arredondados e girado)');
@@ -120,7 +123,7 @@ const GEOM = `(function(){
   const box = await p.$eval('#camCv', e => { const r = e.getBoundingClientRect(); return [r.left, r.top]; });
   await p.mouse.click(box[0] + pos[0], box[1] + pos[1]); await p.waitForTimeout(200);
   check(/Círculo Ø 30 mm/.test(await p.$eval('#camSel', e => e.innerText)), 'clicar seleciona o círculo');
-  await p.selectOption('#camSelOp', 'off'); await p.waitForTimeout(400);
+  await p.selectOption('#camSelOp', 'off'); await p.waitForTimeout(300); await idle(p);
   check((await p.evaluate(GEOM)).filter(f => f.op === 'in').length === 0, 'ignorar só a linha selecionada');
   await p.keyboard.press('Escape');
   check(await p.$eval('#camSel', e => e.hidden), 'Esc fecha a seleção');
@@ -141,8 +144,8 @@ const GEOM = `(function(){
   }, dxf);
   await p.click('#btnOpen'); await p.click('#menuOpen button[data-o="folder"]'); await p.waitForTimeout(500);
   check((await p.$$eval('#tree .tr.cad', r => r.map(x => x.textContent.trim()))).join() .indexOf('peca.dxf') >= 0, 'desenho aparece na árvore de arquivos');
-  await p.click('#tree .tr.cad >> text=peca.dxf'); await p.waitForTimeout(700);
-  check(await p.evaluate(() => CAM.active() && CAM.state.file.name === 'peca.dxf'), 'clicar no desenho abre na aba Gerar G-code');
+  await p.click('#tree .tr.cad >> text=peca.dxf'); await p.waitForTimeout(500); await idle(p);
+  check(await p.evaluate(() => CAM.active() && CAM.state.files.length === 1 && CAM.state.files[0].name === 'peca.dxf'), 'clicar no desenho abre na aba Gerar G-code');
   await p.click('#camSaveG'); await p.waitForTimeout(1200);
   const saved = await p.evaluate(async () => {
     const top = await (await navigator.storage.getDirectory()).getDirectoryHandle('Projetos');
@@ -166,8 +169,8 @@ const GEOM = `(function(){
   })();`);
   await p.goto(PAGE);
   await p.click('#modeTabs button[data-m="cam"]');
-  await p.click('#camSample'); await p.waitForTimeout(600);
-  check(await p.evaluate(() => CAM.state.plan && CAM.state.plan.feats.length > 5), 'exemplo calculado no modo PC antigo');
+  await p.click('#camSample'); await p.waitForTimeout(300); await idle(p);
+  check(await p.evaluate(() => CAM.state.plan && CAM.state.plan.feats.length > 5), 'exemplo calculado (com aproveitamento) no modo PC antigo');
   await p.screenshot({ path: out('cam-antigo.png') });
   await p.click('#camGen'); await p.waitForTimeout(900);
   check(await p.evaluate(() => S.M && S.M.n > 100), 'G-code gerado e desenhado no modo compatível');
