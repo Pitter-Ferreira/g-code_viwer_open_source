@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="300mm" height="200mm" viewBox="0 0 300 200">
+  <title>Placa de teste</title>
+  <defs><circle id="furo" r="4"/></defs>
+  <!-- peça: retângulo arredondado 200 x 120 -->
+  <rect x="10" y="10" width="200" height="120" rx="10" fill="none" stroke="#f00" stroke-width="0.5"/>
+  <!-- furo redondo Ø30 -->
+  <circle cx="60" cy="70" r="15" style="fill:none;stroke:red"/>
+  <!-- rebaixo: caminho com arco e curva -->
+  <path d="M120 40 h50 a10 10 0 0 1 10 10 v20 c0 10 -10 10 -10 10 H120 z" fill="none" stroke="blue"/>
+  <!-- gravação: linha aberta com curvas Q/T -->
+  <path d="M30 115 Q 60 100 90 115 T 150 115" fill="none" stroke="#00aa00"/>
+  <!-- furos feitos com <use>, cor herdada do grupo -->
+  <g stroke="rgb(255,0,255)" fill="none"><use xlink:href="#furo" x="195" y="25"/><use xlink:href="#furo" x="195" y="115"/></g>
+  <!-- segunda peça: quadrado 40 x 40 girado 45° -->
+  <g transform="translate(260 60) rotate(45)"><rect x="-20" y="-20" width="40" height="40" fill="none" stroke="red"/></g>
+  <text x="20" y="190" font-size="8">texto ignorado</text>
+  <rect x="0" y="0" width="5" height="5" style="display:none" stroke="red"/>
+</svg>

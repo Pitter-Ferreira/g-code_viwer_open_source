@@ -257,6 +257,41 @@ input[type=range]{accent-color:var(--accent);width:100%}
 .btn[disabled]{opacity:.45;cursor:default}
 .dirty{color:var(--c-tool);font-weight:700}
 
+/* aba Gerar G-code */
+.modes button{font-weight:600}
+.app.mode-cam #vp,.app.mode-cam .player,.app.mode-cam #views,.app.mode-cam #btnPaste{display:none !important}
+.app.mode-cam .side .panel:not(.cam){display:none !important}
+.app:not(.mode-cam) .side .panel.cam{display:none !important}
+.camview{position:relative;flex:1;min-width:0;min-height:0;background:var(--canvas);overflow:hidden;touch-action:none;-ms-touch-action:none;cursor:default}
+.camview canvas{position:absolute;top:0;left:0;width:100%;height:100%;display:block}
+.camview.panning{cursor:move}
+.cam-tools{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:10px;z-index:2;background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:4px 4px 4px 10px;font-size:12px}
+.cam-tools .btn{height:28px}
+.camview .vtools{left:auto;right:12px;bottom:46px;align-items:flex-end}
+.cam-sel .field{margin-top:6px}
+.cam-sel select{max-width:190px}
+.lrows .lrow{padding:6px 0;border-top:1px solid var(--border)}
+.lrows .lrow:first-child{border-top:0;padding-top:0}
+.lhead{display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:4px;min-width:0}
+.lhead b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lhead small{color:var(--muted);margin-left:auto;white-space:nowrap}
+.lhead .dot{margin-right:0;flex:none;border:1px solid var(--border)}
+.lctl{display:flex;gap:6px}
+.lctl select,.lctl input{height:28px;border:1px solid var(--border);border-radius:7px;background:var(--panel-2);padding:0 6px;min-width:0;font-size:12px}
+.lctl select{flex:1}
+.lctl input{width:76px;flex:none;text-align:right}
+.field input.num{width:84px;text-align:right}
+.tlist{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:4px}
+.tlist .trow{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:13px;border-top:1px solid var(--border)}
+.tlist .trow:first-child{border-top:0}
+.tlist .trow:hover{background:var(--accent-soft)}
+.tlist .trow.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tlist .trow b{font:600 11px Consolas,"Courier New",monospace;color:var(--muted);flex:none}
+.tlist .trow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tlist .trow small{color:var(--muted);flex:none}
+.tr.cad .ic{color:#7c3aed}
+.ewarn div+div{margin-top:4px}
+
 /* navegadores antigos sem "gap" em flexbox */
 @supports not (gap: 10px){
   .top>*,.player>*{margin-right:8px}
@@ -271,18 +306,26 @@ input[type=range]{accent-color:var(--accent);width:100%}
   .acts .btn{margin:4px}
   .layer-row>*{margin-right:6px}
   .field label{margin-right:8px}
+  .lctl>*,.lhead>*,.cam-tools>*,.tlist .trow>*{margin-right:6px}
+  .eacts .btn+.btn{margin-left:8px}
 }
 
-@media (max-width: 1280px){
+@media (max-width: 1500px){
   .brand span{display:none}
   #btnPaste .lbl{display:none}
   #btnPaste{width:32px;padding:0;justify-content:center}
+}
+@media (max-width: 1366px){
+  #btnOpen .lbl{display:none}
 }
 @media (max-width: 860px){
   .app{flex-direction:column;overflow-y:auto;height:auto;min-height:100vh}
   .center{flex:none}
   .files{width:auto;border-right:0;border-bottom:1px solid var(--border);max-height:45vh;height:auto;flex:none}
   .viewport{flex:none;height:58vh;min-height:300px}
+  .camview{flex:none;height:58vh;min-height:300px}
+  .cam-tools .opt span{display:none}
+  .camview .vtools{display:none}
   .side{width:auto;border-left:0;border-top:1px solid var(--border);overflow:visible;height:auto}
   .code-panel{flex:none;height:340px}
   .brand span{display:none}
@@ -332,6 +375,10 @@ input[type=range]{accent-color:var(--accent);width:100%}
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-9 4 6 3-4 6 7"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><path d="M3 21h18"/></svg>
         <span>G-code Viewer <small class="ver">v__VERSION__</small></span>
       </div>
+      <div class="seg modes" id="modeTabs">
+        <button data-m="view" class="on" title="Ver, simular e editar G-code">Visualizar</button>
+        <button data-m="cam" title="Gerar G-code a partir de um desenho DXF ou SVG">Gerar G-code</button>
+      </div>
       <div class="menu-wrap">
         <button class="btn primary" id="btnOpen" title="Abrir arquivo ou pasta">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl">Abrir</span>
@@ -339,7 +386,8 @@ input[type=range]{accent-color:var(--accent);width:100%}
         </button>
         <div class="menu" id="menuOpen">
           <button data-o="file">Arquivo G-code…<small>Abre um arquivo (Ctrl+O)</small></button>
-          <button data-o="folder">Pasta…<small>Mostra os G-codes da pasta na árvore à esquerda</small></button>
+          <button data-o="cad">Desenho DXF/SVG…<small>Abre na aba Gerar G-code</small></button>
+          <button data-o="folder">Pasta…<small>Mostra os G-codes e desenhos da pasta na árvore à esquerda</small></button>
         </div>
       </div>
       <button class="btn" id="btnPaste" title="Editar o código (ou colar um G-code novo)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span class="lbl">Editar código</span></button>
@@ -374,7 +422,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
             <button class="btn" data-act="cnc">Exemplo CNC</button>
             <button class="btn" data-act="3d">Exemplo impressora 3D</button>
           </div>
-          <div class="ext">.gcode · .nc · .ngc · .tap · .cnc · .gco · .txt …</div>
+          <div class="ext">.gcode · .nc · .ngc · .tap · .cnc · .gco · .txt …<br>Desenhos .dxf e .svg abrem na aba “Gerar G-code”.</div>
         </div>
       </div>
       <div class="loading" id="loading" hidden><div class="lbox"><div id="loadTxt">Processando…</div><div class="bar"><i id="loadBar"></i></div></div></div>
@@ -393,6 +441,31 @@ input[type=range]{accent-color:var(--accent);width:100%}
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="camview" id="camView" hidden>
+      <canvas id="camCv"></canvas>
+      <div class="mbox cam-sel" id="camSel" hidden></div>
+      <div class="cam-tools">
+        <label class="opt" title="Mostra o caminho do centro da fresa e as pontes"><input type="checkbox" id="camShowPaths" checked><span>Caminho da fresa</span></label>
+        <button class="btn" id="camFit" title="Enquadrar a chapa (F ou duplo clique)">Enquadrar</button>
+      </div>
+      <div class="vtools"><div class="legend" id="camLegend" hidden></div></div>
+      <div class="coords" id="camCoords"></div>
+      <div class="empty" id="camEmpty">
+        <div class="card">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2.5"/><path d="M14 14h4v4h-4zM6 16l3-3"/></svg>
+          <h2>Arraste um desenho DXF ou SVG aqui</h2>
+          <p>ou abra pelo botão abaixo. Escolha a operação de cada camada e a fresa, e o G-code sai pronto para o Mach3.</p>
+          <div class="acts">
+            <button class="btn primary" id="camOpenBtn">Abrir desenho</button>
+            <button class="btn" id="camSample">Exemplo</button>
+          </div>
+          <div class="ext">.dxf · .svg — arquivo .dwg: salve como DXF no programa de desenho</div>
+        </div>
+      </div>
+      <input type="file" id="camFileIn" accept=".dxf,.svg,image/svg+xml" style="display:none">
+      <input type="file" id="camToolFile" accept=".json,application/json" style="display:none">
     </section>
 
     <footer class="player">
@@ -474,6 +547,77 @@ input[type=range]{accent-color:var(--accent);width:100%}
       </div>
     </div>
 
+    <div class="panel cam" id="camFilePanel">
+      <h3>Desenho <span id="camFileName"></span></h3>
+      <div id="camInfo"><div class="kv"><span class="k">Nenhum desenho aberto</span></div></div>
+      <div class="field"><label for="camUnit" title="Confira o tamanho do desenho acima: se estiver errado, troque a unidade">Unidade do desenho</label>
+        <select id="camUnit">
+          <option value="auto">Automática</option><option value="mm">mm</option><option value="cm">cm</option><option value="m">metro</option>
+          <option value="in">polegada</option><option value="px96">px (96 ppp)</option><option value="px72">pt / px 72 ppp (Illustrator, Corel)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel cam" id="camLayersPanel">
+      <h3>Operações por camada</h3>
+      <div id="camLayers" class="lrows"><div class="note" style="margin-left:0">Abra um desenho para escolher as operações.</div></div>
+      <div class="note" style="margin-left:0">Automático: contorno externo = recorte por fora, furo = recorte por dentro, linha aberta = gravar, ponto = furar. Clique numa linha do desenho para mudar só ela.</div>
+    </div>
+
+    <div class="panel cam" id="camGenPanel">
+      <h3>Gerar G-code</h3>
+      <div id="camStats"><div class="kv"><span class="k">—</span></div></div>
+      <div class="ewarn" id="camWarn"></div>
+      <div class="eacts"><button class="btn primary" id="camGen" title="Gera o G-code e abre na aba Visualizar para conferir">Gerar e visualizar</button></div>
+      <div class="eacts"><button class="btn" id="camSaveG" title="Salva o arquivo G-code (Ctrl+S)">Salvar G-code…</button></div>
+      <div class="note" style="margin-left:0" id="camOrigin"></div>
+    </div>
+
+    <div class="panel cam" id="camSheetPanel">
+      <h3>Chapa e máquina</h3>
+      <div class="field"><label for="camW">Largura da chapa (X)</label><input type="text" id="camW" data-k="sheet.w" class="num"></div>
+      <div class="field"><label for="camH">Altura da chapa (Y)</label><input type="text" id="camH" data-k="sheet.h" class="num"></div>
+      <div class="field"><label for="camT">Espessura</label><input type="text" id="camT" data-k="sheet.t" class="num"></div>
+      <div class="field"><label for="camMargin" title="Distância da borda da chapa até o caminho da fresa">Margem</label><input type="text" id="camMargin" data-k="margin" class="num"></div>
+      <div class="field"><label for="camPlace">Posição do desenho</label>
+        <select id="camPlace" data-k="place"><option value="corner">Encostar no canto (margem)</option><option value="asis">Como está no desenho</option></select></div>
+      <div class="field"><label for="camZRef" title="Onde você zera o Z na máquina">Z zero</label>
+        <select id="camZRef" data-k="zRef"><option value="top">Topo da chapa</option><option value="table">Mesa (base da chapa)</option></select></div>
+      <div class="field"><label for="camOver" title="Quanto o recorte passa da espessura para soltar a peça">Passar da chapa</label><input type="text" id="camOver" data-k="overcut" class="num"></div>
+      <div class="field"><label for="camSafe" title="Altura para andar entre os cortes sem bater nos grampos">Altura segura</label><input type="text" id="camSafe" data-k="safeZ" class="num"></div>
+      <div class="field"><label for="camDir" title="Com a fresa girando no sentido horário (M3)">Sentido do corte</label>
+        <select id="camDir" data-k="dir"><option value="climb">Concordante</option><option value="conv">Convencional</option></select></div>
+      <div class="field"><label for="camTC">Troca de fresa</label>
+        <select id="camTC" data-k="toolChange"><option value="m6">M6 (o Mach3 pede a troca)</option><option value="m0">M0 (pausa)</option></select></div>
+      <label class="opt" style="margin-top:6px"><input type="checkbox" id="camPark" data-k="park"><span>Voltar para X0 Y0 no fim</span></label>
+      <div class="note" style="margin-left:0">Medidas em mm. Origem X0 Y0 no canto inferior esquerdo da chapa.</div>
+    </div>
+
+    <div class="panel cam" id="camTabsPanel">
+      <h3>Pontes (segurar a peça)</h3>
+      <label class="opt"><input type="checkbox" id="camTabsOn" data-k="tabs.on"><span>Deixar pontes nos recortes que atravessam</span></label>
+      <div class="field"><label for="camTabsN">Pontes por peça</label><input type="text" id="camTabsN" data-k="tabs.count" class="num"></div>
+      <div class="field"><label for="camTabsW">Largura da ponte</label><input type="text" id="camTabsW" data-k="tabs.width" class="num"></div>
+      <div class="field"><label for="camTabsH" title="Espessura de material que fica segurando a peça">Altura da ponte</label><input type="text" id="camTabsH" data-k="tabs.height" class="num"></div>
+      <label class="opt" style="margin-top:6px"><input type="checkbox" id="camTabsIn" data-k="tabs.inner"><span>Também nos recortes internos</span></label>
+    </div>
+
+    <div class="panel cam" id="camToolsPanel">
+      <h3>Fresas <span id="camToolCount"></span></h3>
+      <div class="tlist" id="camToolList"></div>
+      <div id="camToolForm">
+        <div class="field"><label for="ctName">Nome</label><input type="text" id="ctName" data-t="name" style="width:170px"></div>
+        <div class="field"><label for="ctD">Diâmetro (mm)</label><input type="text" id="ctD" data-t="d" class="num"></div>
+        <div class="field"><label for="ctS">Rotação S (rpm)</label><input type="text" id="ctS" data-t="s" class="num"></div>
+        <div class="field"><label for="ctF">Avanço F (mm/min)</label><input type="text" id="ctF" data-t="f" class="num"></div>
+        <div class="field"><label for="ctFz" title="Velocidade de descida (Z)">Mergulho F (mm/min)</label><input type="text" id="ctFz" data-t="fz" class="num"></div>
+        <div class="field"><label for="ctStep" title="Quanto desce a cada passada">Passada (mm)</label><input type="text" id="ctStep" data-t="step" class="num"></div>
+        <div class="field"><label for="ctOver" title="Quanto a fresa avança de lado no rebaixo, em % do diâmetro">Passo no rebaixo (%)</label><input type="text" id="ctOver" data-t="over" class="num"></div>
+      </div>
+      <div class="eacts"><button class="btn" id="camToolNew">Nova</button><button class="btn" id="camToolDup">Duplicar</button><button class="btn" id="camToolDel">Excluir</button></div>
+      <div class="eacts"><button class="btn" id="camToolExp" title="Salva a lista de fresas num arquivo">Exportar</button><button class="btn" id="camToolImp" title="Carrega uma lista de fresas salva">Importar</button></div>
+    </div>
+
     <div class="panel code-panel" id="codePanel">
       <h3>Código <span id="codeMeta"></span></h3>
       <div class="code" id="code"><div id="codeSpacer"></div><div id="codeLines"></div></div>
@@ -481,7 +625,7 @@ input[type=range]{accent-color:var(--accent);width:100%}
   </aside>
 </div>
 
-<div class="drop" id="drop"><div>Solte o arquivo G-code para visualizar</div></div>
+<div class="drop" id="drop"><div>Solte o arquivo aqui (G-code, DXF ou SVG)</div></div>
 
 <div class="toast" id="toast"></div>
 <div class="ctx" id="ctx" hidden></div>
@@ -1917,13 +2061,14 @@ function modelLoaded(M, text, keepView){
 }
 function readAndLoad(file, extra){
   if (!file) return;
+  if (isCad(file.name) && window.CAM){ window.CAM.openFile(file, extra); return; }
   if (file.size > 400*1048576 && !window.confirm('Arquivo muito grande (' + (file.size/1048576).toFixed(0) + ' MB). Tentar abrir mesmo assim?')) return;
   readFileText(file, (err, text, enc, bom) => {
     if (err){ toast('Não foi possível ler o arquivo.'); return; }
     loadText(text, assign({ name: file.name, size: file.size, enc: enc, bom: bom, handle: null, parent: null, path: null }, extra || {}), false);
   });
 }
-function loadFile(file){ if (confirmDiscard()) readAndLoad(file); }
+function loadFile(file){ if ((file && isCad(file.name)) || confirmDiscard()) readAndLoad(file); }
 function openFileDialog(){
   if (!confirmDiscard()) return;
   if (typeof window.showOpenFilePicker === 'function'){
@@ -2194,6 +2339,8 @@ function saveFile(copy){
    Navegadores antigos/Firefox: só leitura (webkitdirectory).
    ===================================================================== */
 const GCODE_RE = /\.(gcode|gco|gc|g|nc|ngc|nc1|ncc|tap|cnc|txt|iso|eia|mpf|min|ptp|dnc|hnc|ncf|cut|nci)$/i;
+const CAD_RE = /\.(dxf|svg)$/i;   // desenhos: abrem na aba "Gerar G-code"
+const isCad = name => CAD_RE.test(name || '');
 const HAS_FSA = typeof window.showDirectoryPicker === 'function';
 const HAS_DIRIN = 'webkitdirectory' in document.createElement('input');
 const T = { mode: null, root: null, rootHandle: null, lastHandle: null, nodes: [], selPath: null, q: '', all: false, open: {}, dragId: -1, ctxNode: null, nG: 0,
@@ -2324,7 +2471,7 @@ function renderTree(){
   const q = norm(T.q.replace(/^\s+|\s+$/g, ''));
   const vis = {};
   const check = n => {
-    if (n.kind === 'file'){ const ok = (T.all || GCODE_RE.test(n.name)) && (!q || norm(n.name).indexOf(q) >= 0); vis[n.id] = ok; return ok; }
+    if (n.kind === 'file'){ const ok = (T.all || GCODE_RE.test(n.name) || isCad(n.name)) && (!q || norm(n.name).indexOf(q) >= 0); vis[n.id] = ok; return ok; }
     let any = false;
     n.children.forEach(c => { if (check(c)) any = true; });
     vis[n.id] = any || !q;
@@ -2344,14 +2491,14 @@ function renderTree(){
     const rootLen = T.root.path.length + 1;
     list.forEach(n => {
       const folder = n.parent === T.root ? T.root.name : n.parent.path.slice(rootLen);
-      html += '<div class="tr file flat' + (n.path === curPath ? ' cur' : '') + (n.path === T.selPath ? ' sel' : '') + '" data-id="' + n.id + '" title="' + tip(n) + '">' +
+      html += '<div class="tr file flat' + (isCad(n.name) ? ' cad' : '') + (n.path === curPath ? ' cur' : '') + (n.path === T.selPath ? ' sel' : '') + '" data-id="' + n.id + '" title="' + tip(n) + '">' +
         '<span class="ic">' + ICON_FILE + '</span><span class="fl"><span class="nm">' + hlName(n.name, q) + '</span><small>' + esc(folder) + '</small></span>' + meta(n) + '</div>';
     });
   } else {
     const row = (n, depth) => {
       if (!vis[n.id]) return;
       const isDir = n.kind === 'dir', open = isDir && (q ? true : !!T.open[n.path]);
-      html += '<div class="tr ' + (isDir ? 'dir' : 'file') + (n.path === curPath ? ' cur' : '') + (n.path === T.selPath ? ' sel' : '') +
+      html += '<div class="tr ' + (isDir ? 'dir' : 'file' + (isCad(n.name) ? ' cad' : '')) + (n.path === curPath ? ' cur' : '') + (n.path === T.selPath ? ' sel' : '') +
         '" data-id="' + n.id + '"' + (T.mode === 'fsa' ? ' draggable="true"' : '') + ' style="padding-left:' + (4 + depth*14) + 'px" title="' + tip(n) + '">' +
         '<span class="tw">' + (isDir ? (open ? '▾' : '▸') : '') + '</span><span class="ic">' + (isDir ? ICON_DIR : ICON_FILE) + '</span>' +
         '<span class="nm">' + hlName(n.name, q) + '</span>' + meta(n) + '</div>';
@@ -2408,8 +2555,10 @@ function pickFolder(){
 }
 function openNode(n){
   if (n.kind !== 'file') return;
-  if (S.file && S.file.path === n.path && !isDirty()) return;
-  if (!confirmDiscard()) return;
+  if (!isCad(n.name)){
+    if (S.file && S.file.path === n.path && !isDirty()) return;
+    if (!confirmDiscard()) return;
+  }
   const meta = { handle: n.handle, parent: n.parent ? n.parent.handle : null, path: n.path, name: n.name };
   if (n.file) readAndLoad(n.file, meta);
   else if (n.handle) n.handle.getFile().then(f => readAndLoad(f, meta), err => toast('Não foi possível abrir: ' + err.message));
@@ -2652,7 +2801,8 @@ on($('#btnOpen'), 'click', e => { e.stopPropagation(); closeMenus('menuOpen'); $
 on($('#menuOpen'), 'click', e => {
   const b = closest(e.target, 'button'); if (!b) return;
   closeMenus();
-  if (b.getAttribute('data-o') === 'folder') pickFolder(); else openFileDialog();
+  const o = b.getAttribute('data-o');
+  if (o === 'folder') pickFolder(); else if (o === 'cad' && window.CAM) window.CAM.openDialog(); else openFileDialog();
 });
 on($('#fileIn'), 'change', e => { const f = e.target.files && e.target.files[0]; loadFile(f); try { e.target.value = ''; } catch (err) {} });
 on(document, 'click', () => closeMenus());
@@ -2749,9 +2899,10 @@ on($('#btnTheme'), 'click', () => {
   root.setAttribute('data-theme', dark ? 'light' : 'dark');
   store('gcv-theme', dark ? 'light' : 'dark');
   readColors(); updateLegend(); req();
+  if (window.CAM) window.CAM.redraw();
 });
 if (darkMQ){
-  const mqChange = () => { readColors(); updateLegend(); req(); };
+  const mqChange = () => { readColors(); updateLegend(); req(); if (window.CAM) window.CAM.redraw(); };
   if (darkMQ.addEventListener) darkMQ.addEventListener('change', mqChange);
   else if (darkMQ.addListener) darkMQ.addListener(mqChange);
 }
@@ -2781,7 +2932,7 @@ on(window, 'drop', e => {
     if (p){
       p.then(h => {
         if (h && h.kind === 'directory'){ openDirHandle(h); return; }
-        if (!confirmDiscard()) return;
+        if (!(h && isCad(h.name)) && !confirmDiscard()) return;
         if (h && h.kind === 'file') return h.getFile().then(file => readAndLoad(file, { handle: h }));
         readAndLoad(f);
       }).catch(() => { if (f && confirmDiscard()) readAndLoad(f); });
@@ -2795,7 +2946,9 @@ on(window, 'beforeunload', e => { if (isDirty()){ const m = 'Há alterações n�
 on(window, 'keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase(), type = (e.target.type || '').toLowerCase();
   const kc = e.keyCode || e.which;
-  if ((e.ctrlKey || e.metaKey) && kc === 79){ e.preventDefault(); openFileDialog(); return; }
+  const camMode = window.CAM && window.CAM.active();
+  if ((e.ctrlKey || e.metaKey) && kc === 79){ e.preventDefault(); if (camMode) window.CAM.openDialog(); else openFileDialog(); return; }
+  if (camMode){ window.CAM.key(e, kc, tag, type); return; }
   if ((e.ctrlKey || e.metaKey) && kc === 83){ e.preventDefault(); if (S.M && !dlgOpen) saveFile(false); return; }
   if (kc === 27){ hideCtx(); closeMenus(); if (dlgOpen){ openPaste(false); return; } if (MS.on && (e.target.tagName || '').toLowerCase() !== 'input'){ if (MS.a){ MS.a = null; MS.b = null; updateMeasureBox(); req(); } else setMeasure(false); return; } }
   if (tag === 'div' && e.target.id === 'tree' && treeKey(e, kc)) return;
@@ -2865,6 +3018,10 @@ function initCollapsible(){
   window.__gcvReady = true;
 })();
 </script>
+<script data-vendor="clipper-lib/clipper.js"></script>
+<script data-vendor="dxf-parser/dist/dxf-parser.js"></script>
+<script data-src="cam-core.js"></script>
+<script data-src="cam.js"></script>
 <script>
 /* mostra erros na tela e avisa se o navegador for antigo demais */
 (function () {
